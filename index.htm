@@ -301,7 +301,7 @@ var beepbox;
         { name: "fluctuate", spread: 12.0, offset: 0.0, volume: 1.0, sign: -1.0 },
         { name: "recurve", spread: 0.005, offset: 0.0, volume: 0.8, sign: 1.0 },
         { name: "thin", spread: 0.0, offset: 50.0, volume: 1.0, sign: 1.0 },
-        { name: "detune", spread: 0., offset: 0.1, volume: 0.7, sign: 1.0 },
+        { name: "detune", spread: 0.0, offset: 0.1, volume: 0.7, sign: 1.0 },
         { name: "inject", spread: 6.0, offset: 0.4, volume: 1.0, sign: 1.0 },
         { name: "dirty", spread: 0.0, offset: 0.25, volume: 0.7, sign: 1.0 },
         { name: "askewed", spread: 0.0, offset: 0.42, volume: 0.7, sign: 1.0 },
@@ -1839,7 +1839,7 @@ var beepbox;
                 this.pan = beepbox.Config.panCenter;
             }
             if (instrumentObject["detune"] != undefined) {
-                this.detune = clamp(0, beepbox.config.detuneRange, Math.round(beepbox.config.detuneRange));
+                this.detune = clamp(0, beepbox.Config.detuneRange, Math.round(beepbox.Config.detuneRange));
             }
             else {
                 this.detune = 0;
