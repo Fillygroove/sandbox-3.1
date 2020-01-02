@@ -2005,22 +2005,22 @@ var beepbox;
                 if (instrumentObject["cycleA"] != undefined) {
                     this.cycleA = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleA"]);
                     if (this.cycleA == -1)
-                        this.cycleA = beepbox.Config.envelopes.dictionary["12.5%"].index;
+                        this.cycleA = beepbox.Config.dutyCycle.dictionary["12.5%"].index;
                 }
                 if (instrumentObject["cycleB"] != undefined) {
                     this.cycleB = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleB"]);
                     if (this.cycleB == -1)
-                        this.cycleB = beepbox.Config.envelopes.dictionary["25%"].index;
+                        this.cycleB = beepbox.Config.dutyCycle.dictionary["25%"].index;
                 }
                 if (instrumentObject["cycleC"] != undefined) {
                     this.cycleC = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleC"]);
                     if (this.cycleC == -1)
-                        this.cycleC = beepbox.Config.envelopes.dictionary["50%"].index;
+                        this.cycleC = beepbox.Config.dutyCycle.dictionary["50%"].index;
                 }
                 if (instrumentObject["cycleD"] != undefined) {
                     this.cycleD = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleD"]);
                     if (this.cycleD == -1)
-                        this.cycleD = beepbox.Config.envelopes.dictionary["75%"].index;
+                        this.cycleD = beepbox.Config.dutyCycle.dictionary["75%"].index;
                 }
                 if (instrumentObject["vibrato"] != undefined) {
                     this.vibrato = beepbox.Config.vibratos.findIndex(vibrato => vibrato.name == instrumentObject["vibrato"]);
