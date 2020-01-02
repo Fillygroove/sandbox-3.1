@@ -95,7 +95,7 @@
 	<div id="beepboxEditorContainer"></div>
 	
 		<h1>
-			Sandbox 3.1.0
+			Sandbox 3.1.1
 		</h1>
 		<p id="introduction">
 			Welcome to Sandbox; an online tool for sketching and sharing chiptune melodies! Sandbox is a modded varient of John Nesky's <a href="https://beepbox.co">Beepbox</a>. If you haven't already, give Beepbox a try before coming here!<br/><br/>
@@ -112,6 +112,7 @@
 						Looking for 3.0.x updates? Go <a href="https://parad0xstuff.github.io/sandbox-3.0">Here!</a><br>
 					</small><br/>
 					* Dec. 31, 2019: 3.1.0: Upgraded to the latest version. Added more tremolo options for triplets and quintuplets. Added Jummbox's Custom Chip instrument type, along with the drop down menu that comes along with it. Added numerous presets that come from all over the Modded Beepbox sphere, both good and bad. The Detune Slider may now be playable in every different channel. Added a new Transition type that makes notes placed down sound like they're sliding into each other. Removed Herobrine. 
+					* Jan. 01, 2020: 3.1.1: Added a new unfinished experimental instrument type called Duty Cycle.
 					</p>
 					<h6>
 						This BeepBox mod is sponsored by Aero D. Venture
@@ -201,7 +202,7 @@ var beepbox;
         { name: "÷8", stepsPerBeat: 8, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null },
         { name: "freehand", stepsPerBeat: 24, ticksPerArpeggio: 3, arpeggioPatterns: [[0], [0, 1], [0, 1, 2, 1], [0, 1, 2, 3]], roundUpThresholds: null },
     ]);
-    Config.instrumentTypeNames = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip"];
+    Config.instrumentTypeNames = ["chip", "FM", "noise", "spectrum", "drumset", "harmonics", "PWM", "custom chip", "duty cycle"];
     Config.instrumentTypeHasSpecialInterval = [true, true, false, false, false, true, false, true];
     Config.instrumentTypeHasChorus = [true, true, true, true, true, true, true, true];
     Config.chipWaves = toNameMap([
@@ -239,7 +240,8 @@ var beepbox;
         { name: "sunsoft bass", volume: 1.0, samples: centerWave([0.0, 0.1875, 0.3125, 0.5625, 0.5, 0.75, 0.875, 1.0, 1.0, 0.6875, 0.5, 0.625, 0.625, 0.5, 0.375, 0.5625, 0.4375, 0.5625, 0.4375, 0.4375, 0.3125, 0.1875, 0.1875, 0.375, 0.5625, 0.5625, 0.5625, 0.5625, 0.5625, 0.4375, 0.25, 0.0]) },
         { name: "double bass", volume: 0.4, samples: centerWave([0.0, 0.1875, 0.3125, 0.5625, 0.5, 0.75, 0.875, 1.0, -1.0, -0.6875, -0.5, -0.625, -0.625, -0.5, -0.375, -0.5625, -0.4375, -0.5625, -0.4375, -0.4375, -0.3125, -0.1875, 0.1875, 0.375, 0.5625, -0.5625, 0.5625, 0.5625, 0.5625, 0.4375, 0.25, 0.0]) },
         { name: "triple pulse", volume: 0.4, samples: centerWave([1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.5, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, 1.5]) },
-//      { name: "brucebox", volume: 0.35, samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, -1.0]) },
+        { name: "75% pulse", volume: 0.5, samples: centerWave([1.0, 1.0, 1.0, -1.0]) },
+		//      { name: "brucebox", volume: 0.35, samples: centerWave([1.0, -1.0, 1.0, -1.0, 1.0, -1.0]) },
     ]);
     Config.chipNoises = toNameMap([
         { name: "retro", volume: 0.25, basePitch: 69, pitchFilterMult: 1024.0, isSoft: false, samples: null },
@@ -308,6 +310,12 @@ var beepbox;
         { name: "resonance", spread: 0.0025, offset: 0.1, volume: 0.8, sign: -1.5 },
     ]);
     Config.effectsNames = ["none", "reverb", "chorus", "chorus & reverb"];
+    Config.dutyCycle = toNameMap([
+        { name: "12.5%", wave: [0, 1.75, 1.5, 1.25, 1, 0.75, 0.5, 0.25, 0] },
+        { name: "25%", wave: [0, 1.5, 1, 0.5, 0] },
+        { name: "50%", wave: [0, 1, 0] },
+        { name: "75%", wave: [0, 0.5, 1, 1.5, 0] },	
+    ]);
     Config.volumeRange = 16;
     Config.volumeLogScale = -0.5;
     Config.panCenter = 16;
@@ -437,6 +445,7 @@ var beepbox;
     Config.harmonicsMax = (1 << Config.harmonicsControlPointBits) - 1;
     Config.harmonicsWavelength = 1 << 11;
     Config.pulseWidthRange = 8;
+    Config.cycleTimeRange = 24;
     Config.pitchChannelCountMin = 0;
     Config.pitchChannelCountMax = Infinity;
     Config.noiseChannelCountMin = 0;
@@ -740,6 +749,7 @@ var beepbox;
                 { name: "harmonics", customType: 5 },
                 { name: "pulse width", customType: 6 },
                 { name: "custom chip", customType: 7 },
+                { name: "duty cycle", customType: 8 },
             ]) },
         { name: "Retro Presets", presets: beepbox.toNameMap([
                 { name: "square wave", midiProgram: 80, settings: { "type": "chip", "transition": "seamless", "effects": "none", "chord": "arpeggio", "filterCutoffHz": 4000, "filterResonance": 0, "filterEnvelope": "steady", "wave": "square", "interval": "union", "vibrato": "none" } },
@@ -1575,6 +1585,11 @@ var beepbox;
             this.volume = 0;
             this.pan = beepbox.Config.panCenter;
             this.detune = 0;
+            this.cycleTime = 0;
+            this.cycleA = 0;
+            this.cycleB = 1;
+            this.cycleC = 2;
+            this.cycleD = 3;
             this.pulseWidth = beepbox.Config.pulseWidthRange - 1;
             this.pulseEnvelope = 1;
             this.algorithm = 0;
@@ -1721,7 +1736,21 @@ var beepbox;
                     this.pulseWidth = beepbox.Config.pulseWidthRange - 1;
                     this.pulseEnvelope = beepbox.Config.envelopes.dictionary["twang 2"].index;
                     break;
-					
+                case 8:
+                    this.filterCutoff = 10;
+                    this.filterResonance = 0;
+                    this.filterEnvelope = beepbox.Config.envelopes.dictionary["steady"].index;
+                    this.transition = 1;
+                    this.vibrato = 0;
+                    this.interval = 0;
+                    this.effects = 1;
+                    this.chord = 2;
+					this.cycleTime = 0;
+	                this.cycleA = 0;
+	                this.cycleB = 1;
+	                this.cycleC = 2;
+	                this.cycleD = 3;
+                    break;
                 default:
                     throw new Error("Unrecognized instrument type: " + type);
             }
@@ -1785,6 +1814,14 @@ var beepbox;
             else if (this.type == 6) {
                 instrumentObject["pulseWidth"] = Math.round(Math.pow(0.5, (beepbox.Config.pulseWidthRange - this.pulseWidth - 1) * 0.5) * 50 * 32) / 32;
                 instrumentObject["pulseEnvelope"] = beepbox.Config.envelopes[this.pulseEnvelope].name;
+                instrumentObject["vibrato"] = beepbox.Config.vibratos[this.vibrato].name;
+            }
+            else if (this.type == 8) {
+                instrumentObject["cycleTime"] = this.cycleTime;
+                instrumentObject["cycleA"] = beepbox.Config.dutyCycle[this.cycleA].wave;
+                instrumentObject["cycleB"] = beepbox.Config.dutyCycle[this.cycleB].wave;
+                instrumentObject["cycleC"] = beepbox.Config.dutyCycle[this.cycleC].wave;
+                instrumentObject["cycleD"] = beepbox.Config.dutyCycle[this.cycleD].wave;
                 instrumentObject["vibrato"] = beepbox.Config.vibratos[this.vibrato].name;
             }
             else if (this.type == 5) {
@@ -1948,6 +1985,42 @@ var beepbox;
                     this.pulseEnvelope = beepbox.Config.envelopes.findIndex(envelope => envelope.name == instrumentObject["pulseEnvelope"]);
                     if (this.pulseEnvelope == -1)
                         this.pulseEnvelope = beepbox.Config.envelopes.dictionary["steady"].index;
+                }
+                if (instrumentObject["vibrato"] != undefined) {
+                    this.vibrato = beepbox.Config.vibratos.findIndex(vibrato => vibrato.name == instrumentObject["vibrato"]);
+                    if (this.vibrato == -1)
+                        this.vibrato = 0;
+                }
+                this.chord = beepbox.Config.chords.findIndex(chord => chord.name == instrumentObject["chord"]);
+                if (this.chord == -1)
+                    this.chord = 0;
+            }
+            else if (this.type == 8) {
+                if (instrumentObject["cycleTime"] != undefined) {
+                    this.cycleTime = clamp(0, beepbox.Config.cycleTimeRange, Math.round(beepbox.Config.cycleTimeRange));
+                }
+                else {
+                    this.cycleTime = 0;
+                }
+                if (instrumentObject["cycleA"] != undefined) {
+                    this.cycleA = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleA"]);
+                    if (this.cycleA == -1)
+                        this.cycleA = beepbox.Config.envelopes.dictionary["12.5%"].index;
+                }
+                if (instrumentObject["cycleB"] != undefined) {
+                    this.cycleB = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleB"]);
+                    if (this.cycleB == -1)
+                        this.cycleB = beepbox.Config.envelopes.dictionary["25%"].index;
+                }
+                if (instrumentObject["cycleC"] != undefined) {
+                    this.cycleC = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleC"]);
+                    if (this.cycleC == -1)
+                        this.cycleC = beepbox.Config.envelopes.dictionary["50%"].index;
+                }
+                if (instrumentObject["cycleD"] != undefined) {
+                    this.cycleD = beepbox.Config.dutyCycle.findIndex(dutyCycle => dutyCycle.name == instrumentObject["cycleD"]);
+                    if (this.cycleD == -1)
+                        this.cycleD = beepbox.Config.envelopes.dictionary["75%"].index;
                 }
                 if (instrumentObject["vibrato"] != undefined) {
                     this.vibrato = beepbox.Config.vibratos.findIndex(vibrato => vibrato.name == instrumentObject["vibrato"]);
@@ -2345,6 +2418,10 @@ var beepbox;
                         buffer.push(99, base64IntToCharCode[instrument.vibrato]);
                         buffer.push(87, base64IntToCharCode[instrument.pulseWidth], base64IntToCharCode[instrument.pulseEnvelope]);
                     }
+                    else if (instrument.type == 8) {
+                        buffer.push(99, base64IntToCharCode[instrument.vibrato]);
+                        buffer.push(120, base64IntToCharCode[instrument.cycleTime], base64IntToCharCode[instrument.cycleA], base64IntToCharCode[instrument.cycleB], base64IntToCharCode[instrument.cycleC], base64IntToCharCode[instrument.cycleD]);
+                    }
                     else {
                         throw new Error("Unknown instrument type.");
                     }
@@ -2656,7 +2733,7 @@ var beepbox;
                         instrumentIndexIterator = 0;
                     }
                     const instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
-                    const instrumentType = clamp(0, 8, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    const instrumentType = clamp(0, 9, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     instrument.setTypeAndReset(instrumentType, instrumentChannelIterator >= this.pitchChannelCount);
                 }
                 else if (command == 117) {
@@ -2762,6 +2839,14 @@ var beepbox;
                     const instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                     instrument.pulseWidth = clamp(0, beepbox.Config.pulseWidthRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     instrument.pulseEnvelope = clamp(0, beepbox.Config.envelopes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                }
+                else if (command == 120) {
+                    const instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
+                    instrument.cycleTime = clamp(0, beepbox.Config.cycleTimeRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    instrument.cycleA = clamp(0, beepbox.Config.dutyCycle.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    instrument.cycleB = clamp(0, beepbox.Config.dutyCycle.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    instrument.cycleC = clamp(0, beepbox.Config.dutyCycle.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    instrument.cycleD = clamp(0, beepbox.Config.dutyCycle.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                 }
                 else if (command == 100) {
                     if (beforeThree) {
@@ -3519,6 +3604,8 @@ var beepbox;
             this.feedbackOutputs = [];
             this.feedbackMult = 0.0;
             this.feedbackDelta = 0.0;
+			this.timer = 0.0;
+			this.switcher = 0.0;
             this.reset();
         }
         reset() {
@@ -4400,6 +4487,12 @@ var beepbox;
                 volumeReferencePitch = 16;
                 pitchDamping = 48;
             }
+            else if (instrument.type == 8) {
+                basePitch = beepbox.Config.keys[song.key].basePitch + (instrument.detune / 12);
+                baseVolume = 0.04725;
+                volumeReferencePitch = 16;
+                pitchDamping = 48;
+            }
             else {
                 throw new Error("Unknown instrument type in computeTone.");
             }
@@ -4799,17 +4892,43 @@ var beepbox;
             else if (instrument.type == 4) {
                 return Synth.drumsetSynth;
             }
+            else if (instrument.type == 8) {
+                return Synth.chipSynth;
+            }
             else {
                 throw new Error("Unrecognized instrument type: " + instrument.type);
             }
         }
         static chipSynth(synth, data, stereoBufferIndex, stereoBufferLength, runLength, tone, instrument) {
-            var wave = beepbox.Config.chipWaves[instrument.chipWave].samples;
+			var wave = beepbox.Config.chipWaves[instrument.chipWave].samples;
 			var volumeScale = 1.0;
             const isCustomWave = instrument.type == 7;
+            const isDutyCycle = instrument.type == 8;
+			let cycleA = beepbox.Config.dutyCycle[instrument.cycleA].wave,
+				cycleB = beepbox.Config.dutyCycle[instrument.cycleB].wave,
+				cycleC = beepbox.Config.dutyCycle[instrument.cycleC].wave,
+				cycleD = beepbox.Config.dutyCycle[instrument.cycleD].wave;
             if (isCustomWave) {
 			    wave = instrument.customChipWaveIntegral;
 				volumeScale = 0.04;
+			} else if (isDutyCycle) {
+			    if (tone.timer > beepbox.Config.cycleTimeRange - instrument.cycleTime) {
+				    tone.timer = 0;
+					tone.switcher++
+					if (tone.switcher > 3) tone.switcher = 0;
+				}
+				switch (tone.switcher) {
+					case 0: wave = cycleA;
+						break;
+					case 1: wave = cycleB;
+						break;
+					case 2: wave = cycleC;
+						break;
+					case 3: wave = cycleD;
+						break;
+				}
+				tone.timer++;
+				volumeScale = 0.3;
 			}
             const waveLength = +wave.length - 1;
             const intervalA = +Math.pow(2.0, (beepbox.Config.intervals[instrument.interval].offset + beepbox.Config.intervals[instrument.interval].spread) / 12.0);
@@ -6420,6 +6539,11 @@ var beepbox;
                         message = div(h2("Pulse Wave Width"), p("This setting controls the shape and sound of a pulse wave. At the minimum width, it sounds light and buzzy. At the maximum width, it is shaped like a classic square wave."));
                     }
                     break;
+                case "cycleTime":
+                    {
+                        message = div(h2("Duty Cycle Time"), p("This setting controls how fast the waveforms switch."));
+                    }
+                    break;
                 case "interval":
                     {
                         message = div(h2("Instrument Interval"), p("Some BeepBox instrument types can play two waves at slightly different frequencies. The difference between the frequencies is called an \"interval\", and this setting controls how large it is."), p("When two similar waves play at slightly different frequencies, they move in and out of phase with each other over time as different parts of the waves line up. This creates a dynamic, shifting sound. Pianos are a common example of this kind of sound, because each piano key strikes multiple strings that are tuned to slightly different frequencies."), p("If the interval is large, then the waves can sound out-of-tune and \"dissonant\". If the interval is even larger, then the two frequencies can even be distinct pitches."));
@@ -7600,6 +7724,16 @@ var beepbox;
         }
     }
     beepbox.ChangePulseWidth = ChangePulseWidth;
+    class ChangeCycleTime extends ChangeInstrumentSlider {
+        constructor(doc, oldValue, newValue) {
+            super(doc);
+            this._instrument.cycleTime = newValue;
+            doc.notifier.changed();
+            if (oldValue != newValue)
+                this._didSomething();
+        }
+    }
+    beepbox.ChangeCycleTime = ChangeCycleTime;
     class ChangePulseEnvelope extends beepbox.Change {
         constructor(doc, newValue) {
             super();
@@ -7614,6 +7748,62 @@ var beepbox;
         }
     }
     beepbox.ChangePulseEnvelope = ChangePulseEnvelope;
+    class ChangeCycleA extends beepbox.Change {
+        constructor(doc, newValue) {
+            super();
+            const instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+            const oldValue = instrument.cycleA;
+            if (oldValue != newValue) {
+                instrument.cycleA = newValue;
+                instrument.preset = instrument.type;
+                doc.notifier.changed();
+                this._didSomething();
+            }
+        }
+    }
+    beepbox.ChangeCycleA = ChangeCycleA;
+    class ChangeCycleB extends beepbox.Change {
+        constructor(doc, newValue) {
+            super();
+            const instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+            const oldValue = instrument.cycleB;
+            if (oldValue != newValue) {
+                instrument.cycleB = newValue;
+                instrument.preset = instrument.type;
+                doc.notifier.changed();
+                this._didSomething();
+            }
+        }
+    }
+    beepbox.ChangeCycleB = ChangeCycleB;
+    class ChangeCycleC extends beepbox.Change {
+        constructor(doc, newValue) {
+            super();
+            const instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+            const oldValue = instrument.cycleC;
+            if (oldValue != newValue) {
+                instrument.cycleC = newValue;
+                instrument.preset = instrument.type;
+                doc.notifier.changed();
+                this._didSomething();
+            }
+        }
+    }
+    beepbox.ChangeCycleC = ChangeCycleC;
+    class ChangeCycleD extends beepbox.Change {
+        constructor(doc, newValue) {
+            super();
+            const instrument = doc.song.channels[doc.channel].instruments[doc.getCurrentInstrument()];
+            const oldValue = instrument.cycleD;
+            if (oldValue != newValue) {
+                instrument.cycleD = newValue;
+                instrument.preset = instrument.type;
+                doc.notifier.changed();
+                this._didSomething();
+            }
+        }
+    }
+    beepbox.ChangeCycleD = ChangeCycleD;
     class ChangeFilterCutoff extends ChangeInstrumentSlider {
         constructor(doc, oldValue, newValue) {
             super(doc);
@@ -12636,7 +12826,7 @@ var beepbox;
                             let instrumentPan = (instrument.pan / beepbox.Config.panCenter - 1) * 0x3f + 0x40;
                             writeControlEvent(10, Math.min(0x7f, Math.round(instrumentPan)));
                             let instrumentDetune = instrument.detune;
-                            writeControlEvent(10, Math.min(0x7f, Math.round(instrumentDetune)));
+                            writeControlEvent(12, Math.min(0x7f, Math.round(instrumentDetune)));
                         }
                     }
                     if (song.getPattern(channel, 0) == null) {
@@ -13052,7 +13242,7 @@ var beepbox;
             const currentInstrumentProgram = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
             const currentInstrumentVolumes = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100];
             const currentInstrumentPans = [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64];
-            const currentInstrumentDetune = [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64];
+            const currentInstrumentDetunes = [64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64];
             const noteEvents = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []];
             const pitchBendEvents = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []];
             const expressionEvents = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []];
@@ -13131,6 +13321,11 @@ var beepbox;
                                         case 10:
                                             {
                                                 currentInstrumentPans[eventChannel] = value;
+                                            }
+                                            break;
+                                        case 12:
+                                            {
+                                                currentINstrumentDetunes[eventChannel] = value;
                                             }
                                             break;
                                         case 11:
@@ -13700,6 +13895,7 @@ var beepbox;
             customTypeGroup.appendChild(option({ value: 3 }, beepbox.EditorConfig.valueToPreset(3).name));
             customTypeGroup.appendChild(option({ value: 1 }, beepbox.EditorConfig.valueToPreset(1).name));
 			customTypeGroup.appendChild(option({ value: 7 }, beepbox.EditorConfig.valueToPreset(7).name));
+			customTypeGroup.appendChild(option({ value: 8 }, beepbox.EditorConfig.valueToPreset(8).name));
         }
         menu.appendChild(customTypeGroup);
         for (let categoryIndex = 1; categoryIndex < beepbox.EditorConfig.presetCategories.length; categoryIndex++) {
@@ -13916,6 +14112,14 @@ var beepbox;
             this._pulseEnvelopeRow = div({ className: "selectRow", title: "Pulse Width Modulator Envelope" }, span({ class: "tip", onclick: () => this._openPrompt("pulseEnvelope") }, "Pulse Env:"), div({ className: "selectContainer" }, this._pulseEnvelopeSelect));
             this._pulseWidthSlider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: beepbox.Config.pulseWidthRange - 1, value: "0", step: "1" }), this._doc, (oldValue, newValue) => new beepbox.ChangePulseWidth(this._doc, oldValue, newValue));
             this._pulseWidthRow = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("pulseWidth") }, "Pulse Width:"), this._pulseWidthSlider.input);
+            this._cycleSelectA = buildOptions(select(), beepbox.Config.dutyCycle.map(dutyCycle => dutyCycle.name));
+            this._cycleSelectB = buildOptions(select(), beepbox.Config.dutyCycle.map(dutyCycle => dutyCycle.name));
+            this._cycleSelectC = buildOptions(select(), beepbox.Config.dutyCycle.map(dutyCycle => dutyCycle.name));
+            this._cycleSelectD = buildOptions(select(), beepbox.Config.dutyCycle.map(dutyCycle => dutyCycle.name));
+			this._cycleSelectRow = div({ className: "selectRow", title: "Cycle Select" }, span({ class: "tip", onclick: () => this._openPrompt("pulseEnvelope") }, ""), div({ className: "selectContainer" }, this._cycleSelectA), div({ className: "selectContainer" }, this._cycleSelectB));
+			this._cycleSelectRow2 = div({ className: "selectRow", title: "Cycle Select" }, span({ class: "tip", onclick: () => this._openPrompt("pulseEnvelope") }, ""), div({ className: "selectContainer" }, this._cycleSelectC), div({ className: "selectContainer" }, this._cycleSelectD));
+			this._cycleTimeSlider = new Slider(input({ style: "margin: 0;", type: "range", min: "0", max: beepbox.Config.cycleTimeRange - 1, value: "0", step: "1" }), this._doc, (oldValue, newValue) => new beepbox.ChangeCycleTime(this._doc, oldValue, newValue));
+            this._cycleTimeRow = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("cycleTime") }, "Cycle Time:"), this._cycleTimeSlider.input);
             this._intervalSelect = buildOptions(select(), beepbox.Config.intervals.map(interval => interval.name));
             this._intervalSelectRow = div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("interval") }, "Interval:"), div({ className: "selectContainer" }, this._intervalSelect));
             this._chordSelect = buildOptions(select(), beepbox.Config.chords.map(chord => chord.name));
@@ -13940,7 +14144,7 @@ var beepbox;
             this._feedbackEnvelopeSelect = buildOptions(select({ style: "width: 100%;", title: "Feedback Envelope" }), beepbox.Config.envelopes.map(envelope => envelope.name));
             this._feedbackRow2 = div({ className: "operatorRow" }, div({ style: "margin-right: .1em; visibility: hidden;" }, 1 + "."), div({ style: "width: 3em; margin-right: .3em;" }), this._feedbackAmplitudeSlider.input, div({ className: "selectContainer", style: "width: 5em; margin-left: .3em;" }, this._feedbackEnvelopeSelect));    
 		    this._customizeInstrumentButton = button({ type: "button", style: "margin: 2px 0" }, "Customize Instrument", beepbox.SVG.svg({ style: "flex-shrink: 0; position: absolute; left: 0; top: 50%; margin-top: -1em; pointer-events: none;", width: "2em", height: "2em", viewBox: "-13 -13 26 26" }, beepbox.SVG.g({ transform: "translate(0,1)" }, beepbox.SVG.circle({ cx: "0", cy: "0", r: "6.5", stroke: "currentColor", "stroke-width": "1", fill: "none" }), beepbox.SVG.rect({ x: "-1", y: "-5", width: "2", height: "4", fill: "currentColor", transform: "rotate(30)" }), beepbox.SVG.circle({ cx: "-7.79", cy: "4.5", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "-9", cy: "0", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "-7.79", cy: "-4.5", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "-4.5", cy: "-7.79", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "0", cy: "-9", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "4.5", cy: "-7.79", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "7.79", cy: "-4.5", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "9", cy: "0", r: "0.75", fill: "currentColor" }), beepbox.SVG.circle({ cx: "7.79", cy: "4.5", r: "0.75", fill: "currentColor" }))));
-            this._customInstrumentSettingsGroup = div({ className: "editor-controls" }, this._chipWaveSelectRow, this._chipNoiseSelectRow, this._customWaveDraw, this._filterCutoffRow, this._filterResonanceRow, this._filterEnvelopeRow, this._transitionRow, div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("effects") }, "Effects:"), div({ className: "selectContainer" }, this._effectsSelect)), this._chordSelectRow, this._vibratoSelectRow, this._intervalSelectRow, this._chipWaveSelectRow, this._chipNoiseSelectRow, this._algorithmSelectRow, this._phaseModGroup, this._feedbackRow1, this._feedbackRow2, this._spectrumRow, this._harmonicsRow, this._drumsetGroup, this._pulseEnvelopeRow, this._pulseWidthRow);
+            this._customInstrumentSettingsGroup = div({ className: "editor-controls" }, this._chipWaveSelectRow, this._chipNoiseSelectRow, this._customWaveDraw, this._filterCutoffRow, this._filterResonanceRow, this._filterEnvelopeRow, this._transitionRow, div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("effects") }, "Effects:"), div({ className: "selectContainer" }, this._effectsSelect)), this._chordSelectRow, this._vibratoSelectRow, this._intervalSelectRow, this._chipWaveSelectRow, this._chipNoiseSelectRow, this._algorithmSelectRow, this._phaseModGroup, this._feedbackRow1, this._feedbackRow2, this._spectrumRow, this._harmonicsRow, this._drumsetGroup, this._pulseEnvelopeRow, this._pulseWidthRow, this._cycleSelectRow, this._cycleSelectRow2, this._cycleTimeRow);
             this._instrumentSettingsGroup = div({ className: "editor-controls" }, this._instrumentSelectRow, this._instrumentVolumeSliderRow, this._panSliderRow, this._detuneSliderRow, div({ className: "selectRow" }, span({ class: "tip", onclick: () => this._openPrompt("instrumentType") }, "Type: "), div(div({ className: "pitchSelect" }, this._pitchedPresetSelect), div({ className: "drumSelect" }, this._drumPresetSelect))), this._customizeInstrumentButton, this._customInstrumentSettingsGroup);
 			this._promptContainer = div({ className: "promptContainer", style: "display: none;" });
             this._wasPlaying = false;
@@ -14103,6 +14307,21 @@ var beepbox;
                         this._pulseEnvelopeRow.style.display = "none";
                         this._pulseWidthRow.style.display = "none";
                     }
+                    if (instrument.type == 8) {
+						this._cycleSelectRow.style.display = "";
+						this._cycleSelectRow2.style.display = "";
+						this._cycleTimeRow.style.display = "";
+                        setSelectedValue(this._cycleSelectA, instrument.cycleA);
+                        setSelectedValue(this._cycleSelectB, instrument.cycleB);
+                        setSelectedValue(this._cycleSelectC, instrument.cycleC);
+                        setSelectedValue(this._cycleSelectD, instrument.cycleD);
+						this._cycleTimeSlider.updateValue(instrument.cycleTime);
+                    }
+                    else {
+						this._cycleSelectRow.style.display = "none";
+						this._cycleSelectRow2.style.display = "none";
+                        this._cycleTimeRow.style.display = "none";
+                    }
                     if (instrument.type == 2) {
                         this._vibratoSelectRow.style.display = "none";
                         this._intervalSelectRow.style.display = "none";
@@ -14132,6 +14351,10 @@ var beepbox;
                         this._intervalSelectRow.style.display = "none";
                     }
                     else if (instrument.type == 7) {
+                        this._vibratoSelectRow.style.display = "";
+                        this._intervalSelectRow.style.display = "";
+                    }
+                    else if (instrument.type == 8) {
                         this._vibratoSelectRow.style.display = "";
                         this._intervalSelectRow.style.display = "";
                     }
@@ -14400,6 +14623,18 @@ var beepbox;
             this._whenSetPulseEnvelope = () => {
                 this._doc.record(new beepbox.ChangePulseEnvelope(this._doc, this._pulseEnvelopeSelect.selectedIndex));
             };
+            this._whenSetCycleA = () => {
+                this._doc.record(new beepbox.ChangeCycleA(this._doc, this._cycleSelectA.selectedIndex));
+            };
+            this._whenSetCycleB = () => {
+                this._doc.record(new beepbox.ChangeCycleB(this._doc, this._cycleSelectB.selectedIndex));
+            };
+            this._whenSetCycleC = () => {
+                this._doc.record(new beepbox.ChangeCycleC(this._doc, this._cycleSelectC.selectedIndex));
+            };
+            this._whenSetCycleD = () => {
+                this._doc.record(new beepbox.ChangeCycleD(this._doc, this._cycleSelectD.selectedIndex));
+            };
             this._whenSetTransition = () => {
                 this._doc.record(new beepbox.ChangeTransition(this._doc, this._transitionSelect.selectedIndex));
             };
@@ -14622,6 +14857,10 @@ var beepbox;
             this._effectsSelect.addEventListener("change", this._whenSetEffects);
             this._filterEnvelopeSelect.addEventListener("change", this._whenSetFilterEnvelope);
             this._pulseEnvelopeSelect.addEventListener("change", this._whenSetPulseEnvelope);
+            this._cycleSelectA.addEventListener("change", this._whenSetCycleA);
+            this._cycleSelectB.addEventListener("change", this._whenSetCycleB);
+            this._cycleSelectC.addEventListener("change", this._whenSetCycleC);
+            this._cycleSelectD.addEventListener("change", this._whenSetCycleD);
             this._intervalSelect.addEventListener("change", this._whenSetInterval);
             this._chordSelect.addEventListener("change", this._whenSetChord);
             this._vibratoSelect.addEventListener("change", this._whenSetVibrato);
