@@ -453,6 +453,8 @@ var beepbox;
     Config.harmonicsWavelength = 1 << 11;
     Config.pulseWidthRange = 8;
     Config.cycleTimeRange = 12;
+    Config.cycleTimer = 0;
+    Config.cycleSwitcher = 0;
     Config.pitchChannelCountMin = 0;
     Config.pitchChannelCountMax = Infinity;
     Config.noiseChannelCountMin = 0;
@@ -3666,8 +3668,6 @@ var beepbox;
             this.reverbFeedback3 = 0.0;
             this.audioCtx = null;
             this.scriptNode = null;
-			this.switcher = 0;
-			this.timer = 0;
             this.audioProcessCallback = (audioProcessingEvent) => {
                 const outputBuffer = audioProcessingEvent.outputBuffer;
                 const outputDataL = outputBuffer.getChannelData(0);
@@ -3773,8 +3773,9 @@ var beepbox;
         pause() {
             if (this.paused)
                 return;
-			this.timer = 0;
-            this.paused = true;
+			beepbox.Config.cycleTimer = 0;
+			beepbox.Config.cycleSwitcher = 0;
+			this.paused = true;
             this.scriptNode.disconnect(this.audioCtx.destination);
             if (this.audioCtx.close) {
                 this.audioCtx.close();
@@ -4099,18 +4100,17 @@ var beepbox;
                     if (this.tick == beepbox.Config.ticksPerPart) {
                         this.tick = 0;
                         this.part++;
-						this.timer += beepbox.Config.cycleTime + 1;
-						if (this.timer > 23) {
-							this.timer = 0;
-							this.switcher++
+						beepbox.Config.cycleTimer += beepbox.Config.cycleTime + 1;
+						if (beepbox.Config.cycleTimer > 23) {
+							beepbox.Config.cycleTimer = 0;
+							beepbox.Config.cycleSwitcher++
 						}
 						switch (beepbox.Config.dutyAfterValue) {
-							case 0: if (this.switcher > 2) this.switcher = 0;
+							case 0: if (beepbox.Config.cycleSwitcher > 2) beepbox.Config.cycleSwitcher = 0;
 								break;
-							case 1: if (this.switcher > 3) this.switcher = 0;
+							case 1: if (beepbox.Config.cycleSwitcher > 3) beepbox.Config.cycleSwitcher = 0;
 								break;
 						}
-						console.log(this.switcher);
                         for (let channel = 0; channel < this.song.getChannelCount(); channel++) {
                             for (let i = 0; i < this.activeTones[channel].count(); i++) {
                                 const tone = this.activeTones[channel].get(i);
@@ -4938,7 +4938,7 @@ var beepbox;
 			    wave = instrument.customChipWaveIntegral;
 				volumeScale = 0.04;
 			} else if (isDutyCycle) {
-				switch (synth.switcher) {
+				switch (beepbox.Config.cycleSwitcher) {
 					case 0: wave = cycleA;
 						break;
 					case 1: wave = cycleB;
@@ -4951,7 +4951,6 @@ var beepbox;
 				volumeScale = 0.3;
 			}
 //			console.log(Object.keys(wave).map(i => wave[i]));
-console.log(synth.switcher);
 			const waveLength = +wave.length - 1;
             const intervalA = +Math.pow(2.0, (beepbox.Config.intervals[instrument.interval].offset + beepbox.Config.intervals[instrument.interval].spread) / 12.0);
             const intervalB = Math.pow(2.0, (beepbox.Config.intervals[instrument.interval].offset - beepbox.Config.intervals[instrument.interval].spread) / 12.0) * tone.intervalMult;
@@ -14597,6 +14596,8 @@ var beepbox;
                         break;
                     case 70:
                         this._doc.synth.firstBar();
+						beepbox.Config.cycleTimer = 0;
+						beepbox.Config.cycleSwitcher = 0;
                         if (this._doc.autoFollow) {
                             new beepbox.ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
                         }
@@ -14604,6 +14605,8 @@ var beepbox;
                         break;
                     case 72:
                         this._doc.synth.jumpToEditingBar(this._doc.bar);
+						beepbox.Config.cycleTimer = 0;
+						beepbox.Config.cycleSwitcher = 0;
                         new beepbox.ChangeChannelBar(this._doc, this._doc.channel, Math.floor(this._doc.synth.playhead));
                         event.preventDefault();
                         break;
@@ -14618,7 +14621,6 @@ var beepbox;
             this._togglePlay = () => {
                 if (this._doc.synth.playing) {
                     this._pause();
-					
                 }
                 else {
                     this._play();
